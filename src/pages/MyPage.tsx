@@ -1,13 +1,4 @@
-import {
-  ChevronRight,
-  Heart,
-  MapPin,
-  PackagePlus,
-  ReceiptText,
-  Rocket,
-  Settings,
-  User,
-} from 'lucide-react';
+import { ChevronRight, Heart, MapPin, ReceiptText, Settings, User } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { logout } from '@/api/auth';
 import { getMe, getOrders } from '@/api/mypage';
 import RecentProductsSection from '@/components/RecentProductsSection';
+import Toast from '@/components/Toast';
 import { useAuthStore } from '@/store/authStore';
 import type { OrderSummaryResponse, UserMeResponse } from '@/types/mypage';
 
@@ -24,7 +16,6 @@ type OrderStatus = '배송완료' | '배송중' | '주문접수';
 type Order = {
   id: number;
   status: OrderStatus;
-  hasRocket: boolean;
 };
 
 // 백엔드 주문 status 값이 이 세 한글 라벨과 정확히 일치하는지 확인되지 않아
@@ -34,7 +25,7 @@ function toOrder(res: OrderSummaryResponse): Order {
   const status = (knownStatuses as string[]).includes(res.status)
     ? (res.status as OrderStatus)
     : '주문접수';
-  return { id: res.orderId, status, hasRocket: false };
+  return { id: res.orderId, status };
 }
 
 type QuickMenu = {
@@ -71,20 +62,8 @@ function OrderCard({ order, onClick }: { order: Order; onClick: () => void }) {
       onClick={onClick}
       className="flex h-[154px] w-[124px] shrink-0 flex-col gap-1 rounded-lg border border-gray-200 bg-white p-2 text-left"
     >
-      {order.hasRocket && (
-        <div className="flex items-center gap-0.5">
-          <Rocket size={12} className="text-secondary-300" />
-          <span className="text-secondary-300 text-[10px] leading-none font-semibold">로켓</span>
-          <span className="text-secondary-300 text-[10px] leading-none font-semibold">내일</span>
-        </div>
-      )}
       <span className={`text-body-10 ${STATUS_COLOR[order.status]}`}>{order.status}</span>
-      <div className="relative mt-auto">
-        <div className="h-25 w-25 bg-gray-200" />
-        <div className="absolute right-0 bottom-0 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md">
-          <PackagePlus size={14} className="text-gray-300" />
-        </div>
-      </div>
+      <div className="mt-auto h-25 w-25 bg-gray-200" />
     </button>
   );
 }
@@ -257,11 +236,7 @@ function MyPage() {
         )}
       </div>
 
-      {infoMessage && (
-        <div className="fixed top-18 left-1/2 z-30 w-max -translate-x-1/2 rounded-lg bg-white px-4 py-3 shadow-[4px_4px_12px_0px_rgba(0,0,0,0.2)]">
-          <p className="text-body-9 whitespace-nowrap text-black">{infoMessage}</p>
-        </div>
-      )}
+      <Toast message={infoMessage} onClose={() => setInfoMessage(null)} />
     </div>
   );
 }
