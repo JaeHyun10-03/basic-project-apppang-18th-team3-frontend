@@ -1,14 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Heart,
-  Pencil,
-  Play,
-  Share2,
-  Star,
-  ThumbsUp,
-  X,
-} from 'lucide-react';
+import { ChevronLeft, Heart, Pencil, Play, Share2, Star, ThumbsUp, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -50,9 +40,9 @@ function toReview(item: ReviewItemResponse): Review {
 const COLOR_OPTIONS = ['화이트 + 그레이', '화이트', '그레이'];
 
 const QUANTITY_OPTIONS = [
-  { qty: '20개', discount: '9,810원 할인', savings: null },
-  { qty: '40개', discount: '9,810원 할인', savings: '40개 사면 840원 절약' },
-  { qty: '60개', discount: '9,810원 할인', savings: '60개 사면 1,840원 절약' },
+  { quantity: 20, qty: '20개', discount: '9,810원 할인', savings: null },
+  { quantity: 40, qty: '40개', discount: '9,810원 할인', savings: '40개 사면 840원 절약' },
+  { quantity: 60, qty: '60개', discount: '9,810원 할인', savings: '60개 사면 1,840원 절약' },
 ];
 
 // ─── Sub-components ───────────────────────────────────────
@@ -126,6 +116,9 @@ function ProductDetailPage() {
 
   const [product, setProduct] = useState<ProductDetailResponse | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewTotal, setReviewTotal] = useState(0);
+  const [isLoadingMoreReviews, setIsLoadingMoreReviews] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -139,15 +132,51 @@ function ProductDetailPage() {
     if (!productId) return;
     setIsLoading(true);
     setError(false);
-    Promise.all([getProduct(productId), getReviews(productId)])
+    Promise.all([getProduct(productId), getReviews(productId, { page: 1 })])
       .then(([productRes, reviewsRes]) => {
         setProduct(productRes);
         setIsLiked(productRes.isWished);
         setReviews(reviewsRes.items.map(toReview));
+        setReviewPage(1);
+        setReviewTotal(reviewsRes.total);
       })
       .catch(() => setError(true))
       .finally(() => setIsLoading(false));
   }, [productId]);
+
+  const hasMoreReviews = reviews.length < reviewTotal;
+
+  const handleLoadMoreReviews = () => {
+    if (!productId || isLoadingMoreReviews) return;
+    setIsLoadingMoreReviews(true);
+    getReviews(productId, { page: reviewPage + 1 })
+      .then((res) => {
+        setReviews((prev) => [...prev, ...res.items.map(toReview)]);
+        setReviewPage((prev) => prev + 1);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingMoreReviews(false));
+  };
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: product?.name, url: shareUrl });
+      } catch {
+        // 사용자가 공유를 취소한 경우
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCartMessage('링크가 복사되었습니다');
+    } catch {
+      setCartMessage('링크 복사에 실패했습니다');
+    } finally {
+      setTimeout(() => setCartMessage(null), 2000);
+    }
+  };
 
   const handleToggleWish = () => {
     if (!isLoggedIn) {
@@ -168,7 +197,7 @@ function ProductDetailPage() {
       return;
     }
     if (!product) return;
-    addToCart({ productId: product.productId, quantity: 1 })
+    addToCart({ productId: product.productId, quantity: QUANTITY_OPTIONS[selectedQty].quantity })
       .then(() => setCartMessage('장바구니에 담았습니다'))
       .catch(() => setCartMessage('장바구니 담기에 실패했습니다'))
       .finally(() => setTimeout(() => setCartMessage(null), 2000));
@@ -185,7 +214,7 @@ function ProductDetailPage() {
         productId: product.productId,
         productName: product.name,
         price: product.price,
-        quantity: 1,
+        quantity: QUANTITY_OPTIONS[selectedQty].quantity,
       },
     ]);
     navigate('/checkout');
@@ -195,19 +224,53 @@ function ProductDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <span className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-300" />
+      <div className="flex min-h-screen justify-center">
+        <div className="relative flex h-screen w-full max-w-120 flex-col bg-white">
+          <header className="relative flex shrink-0 items-center justify-center bg-white px-3 py-5">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              aria-label="뒤로 가기"
+              className="absolute left-3 flex h-8 w-8 items-center justify-center"
+            >
+              <ChevronLeft size={24} className="text-black" />
+            </button>
+            <h1 className="text-title-5 font-bold text-black">상품 상세</h1>
+          </header>
+          <div className="flex flex-1 items-center justify-center">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-300" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
-        <p className="text-body-7 text-black">상품 정보를 불러오지 못했습니다.</p>
-        <button type="button" onClick={() => navigate(-1)} className="text-body-9 text-primary-200">
-          이전으로 돌아가기
-        </button>
+      <div className="flex min-h-screen justify-center">
+        <div className="relative flex h-screen w-full max-w-120 flex-col bg-white">
+          <header className="relative flex shrink-0 items-center justify-center bg-white px-3 py-5">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              aria-label="뒤로 가기"
+              className="absolute left-3 flex h-8 w-8 items-center justify-center"
+            >
+              <ChevronLeft size={24} className="text-black" />
+            </button>
+            <h1 className="text-title-5 font-bold text-black">상품 상세</h1>
+          </header>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3">
+            <p className="text-body-7 text-black">상품 정보를 불러오지 못했습니다.</p>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="text-body-9 text-primary-200"
+            >
+              이전으로 돌아가기
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -271,7 +334,7 @@ function ProductDetailPage() {
 
           {/* 공유 아이콘 */}
           <div className="flex items-center px-3 py-1.5">
-            <button type="button" aria-label="공유하기">
+            <button type="button" aria-label="공유하기" onClick={handleShare}>
               <Share2 size={24} className="text-black" />
             </button>
           </div>
@@ -280,11 +343,7 @@ function ProductDetailPage() {
           <div className="flex items-center gap-2.5 px-3 py-1">
             <div className="h-8 w-8 shrink-0 rounded bg-gray-200" />
             <div className="flex flex-col gap-0.5">
-              <button type="button" className="flex items-center gap-0.5">
-                <span className="text-body-7 font-bold text-black">{product.brand}</span>
-                <ChevronRight size={12} className="text-black" />
-              </button>
-              <p className="text-body-10 text-gray-300">브랜드 상품 모아보기</p>
+              <span className="text-body-7 font-bold text-black">{product.brand}</span>
             </div>
           </div>
 
@@ -385,15 +444,6 @@ function ProductDetailPage() {
                 </button>
               ))}
             </div>
-
-            {/* 모든 옵션 보기 */}
-            <button
-              type="button"
-              className="text-body-9 text-primary-200 flex w-full items-center justify-center gap-1 py-3 font-semibold"
-            >
-              모든 옵션 보기
-              <ChevronRight size={12} />
-            </button>
           </div>
 
           {/* 상품정보 */}
@@ -412,15 +462,8 @@ function ProductDetailPage() {
           <div className="h-2 bg-gray-100" />
 
           {/* 상품 리뷰 헤더 */}
-          <div className="flex items-center justify-between px-3 py-3">
+          <div className="flex items-center px-3 py-3">
             <h2 className="text-body-5 font-bold text-black">상품 리뷰</h2>
-            <button
-              type="button"
-              className="text-body-9 text-primary-200 flex items-center gap-0.5 font-semibold"
-            >
-              전체보기
-              <ChevronRight size={12} />
-            </button>
           </div>
 
           {/* 리뷰 요약 */}
@@ -447,6 +490,11 @@ function ProductDetailPage() {
                 리뷰 작성하기
               </button>
             </div>
+            {isLoggedIn && !canWriteReview && (
+              <p className="text-body-10 text-right text-gray-300">
+                구매한 상품에 한해 리뷰를 작성할 수 있어요
+              </p>
+            )}
           </div>
 
           {/* 사진/동영상 */}
@@ -479,14 +527,24 @@ function ProductDetailPage() {
             <ReviewItem key={review.id} review={review} />
           ))}
 
-          {/* 리뷰 전체보기 버튼 */}
+          {/* 리뷰 더보기 버튼 */}
           <div className="px-3 py-2">
-            <button
-              type="button"
-              className="text-body-5 text-primary-200 w-full rounded border border-gray-200 py-3 font-bold"
-            >
-              리뷰 전체보기
-            </button>
+            {hasMoreReviews ? (
+              <button
+                type="button"
+                onClick={handleLoadMoreReviews}
+                disabled={isLoadingMoreReviews}
+                className="text-body-5 text-primary-200 w-full rounded border border-gray-200 py-3 font-bold disabled:text-gray-200"
+              >
+                {isLoadingMoreReviews ? '불러오는 중...' : '리뷰 더보기'}
+              </button>
+            ) : (
+              reviews.length > 0 && (
+                <p className="text-body-9 w-full py-3 text-center text-gray-300">
+                  모든 리뷰를 확인했습니다
+                </p>
+              )
+            )}
           </div>
 
           {/* 하단 여백 (액션바 높이만큼) */}
