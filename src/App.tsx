@@ -12,6 +12,7 @@ import AddressSelectPage from '@/pages/AddressSelectPage';
 import CartPage from '@/pages/CartPage';
 import ChatbotPage from '@/pages/ChatbotPage';
 import CheckoutPage from '@/pages/CheckoutPage';
+import FindAccountPage from '@/pages/FindAccountPage';
 import LoginPage from '@/pages/LoginPage';
 import MainPage from '@/pages/MainPage';
 import MyPage from '@/pages/MyPage';
@@ -21,8 +22,10 @@ import OrderListPage from '@/pages/OrderListPage';
 import ProductDetailPage from '@/pages/ProductDetailPage';
 import ProductListPage from '@/pages/ProductListPage';
 import RegisterPage from '@/pages/RegisterPage';
+import ReviewWritePage from '@/pages/ReviewWritePage';
 import SearchPage from '@/pages/SearchPage';
 import SettingsPage from '@/pages/SettingsPage';
+import WishlistPage from '@/pages/WishlistPage';
 import { useAuthStore } from '@/store/authStore';
 
 function App() {
@@ -51,6 +54,7 @@ function App() {
         <Route path="/search" element={<SearchPage />} />
 
         <Route path="/products/:productId" element={<ProductDetailPage />} />
+        <Route path="/products/:productId/reviews/new" element={<ReviewWritePage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/mypage/addresses" element={<AddressListPage />} />
@@ -58,12 +62,14 @@ function App() {
         <Route path="/mypage/addresses/:addressId/edit" element={<AddressFormPage />} />
         <Route path="/mypage/orders" element={<OrderListPage />} />
         <Route path="/mypage/orders/:orderId" element={<OrderDetailPage />} />
+        <Route path="/mypage/wishlist" element={<WishlistPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/checkout/address" element={<AddressSelectPage />} />
 
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/find-account" element={<FindAccountPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />
